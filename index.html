@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0ea5e9">
+<title>AssignCheck Pro</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+:root{
+  --ac:#0ea5e9;--al:#f0f9ff;--ad:#0369a1;
+  --g:#16a34a;--gb:#dcfce7;--y:#ca8a04;--yb:#fef3c7;
+  --r:#dc2626;--rb:#fee2e2;--b:#7c3aed;--bb:#ede9fe;
+  --or:#ea580c;--ob:#ffedd5;
+  --g50:#f8fafc;--g100:#f1f5f9;--g200:#e2e8f0;
+  --g400:#94a3b8;--g600:#475569;--g800:#1e293b;
+  --white:#fff;--rad:12px;--rads:8px;
+  --sh:0 1px 4px rgba(0,0,0,.07);--shm:0 4px 20px rgba(0,0,0,.12);
+  --nav:60px;--top:52px;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{min-height:100%;font-family:'Sarabun','Segoe UI',system-ui,-apple-system,sans-serif;background:var(--g50);color:var(--g800);font-size:15px;overflow-x:hidden;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+button{cursor:pointer;border:none;background:none;font-family:inherit;font-size:inherit;color:inherit;-webkit-appearance:none;touch-action:manipulation;user-select:none}
+input,select,textarea{font-family:inherit;font-size:inherit;-webkit-appearance:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes popIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;z-index:2000;background:linear-gradient(135deg,#0ea5e9,#0284c7,#7c3aed);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .5s,visibility .5s}
+#splash.hide{opacity:0;visibility:hidden;pointer-events:none}
+.sp-logo{font-size:60px;animation:popIn .6s cubic-bezier(.34,1.56,.64,1) both}
+.sp-title{color:#fff;font-size:22px;font-weight:800}
+.sp-sub{color:rgba(255,255,255,.7);font-size:13px}
+.sp-spin{width:30px;height:30px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-top:6px}
+
+/* LOGIN */
+#login{position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#0ea5e9,#0284c7 50%,#7c3aed);display:none;align-items:center;justify-content:center;padding:max(24px,calc(var(--safe-t)+16px)) 20px}
+#login.show{display:flex}
+.lb{background:#fff;border-radius:24px;padding:30px 24px;width:100%;max-width:380px;box-shadow:0 24px 64px rgba(0,0,0,.3);animation:slideUp .35s cubic-bezier(.34,1.2,.64,1) both}
+.lb-logo{font-size:44px;text-align:center;margin-bottom:10px}
+.lb-title{font-size:21px;font-weight:800;color:var(--g800);text-align:center;margin-bottom:4px}
+.lb-sub{font-size:13px;color:var(--g600);text-align:center;margin-bottom:24px;line-height:1.6}
+.lb-err{background:var(--rb);color:var(--r);border-radius:var(--rads);padding:9px 12px;font-size:13px;margin-bottom:12px;display:none}
+.g-btn{width:100%;padding:13px 16px;border:2px solid var(--g200);border-radius:var(--rads);font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;background:#fff;color:var(--g800);transition:all .15s;margin-bottom:14px}
+.g-btn:active{background:var(--g50);border-color:var(--ac)}
+.g-btn svg{width:20px;height:20px;flex-shrink:0}
+.lb-note{font-size:11px;color:var(--g400);text-align:center;line-height:1.8}
+
+/* SAVING */
+#saving{position:fixed;top:calc(var(--top) + var(--safe-t) + 8px);right:16px;z-index:400;background:var(--ac);color:#fff;border-radius:99px;padding:6px 14px;font-size:12px;font-weight:600;display:none;align-items:center;gap:6px;box-shadow:var(--shm)}
+#saving.show{display:flex}
+#saving .ss{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+
+/* MAIN */
+#main{display:none}
+#main.show{display:block}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:300;background:rgba(255,255,255,.95);border-bottom:1px solid var(--g200);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);padding:0 16px;padding-top:var(--safe-t);height:calc(var(--top) + var(--safe-t));display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:10px;max-width:900px;margin:0 auto}
+.logo{font-size:15px;font-weight:800;color:var(--ac);display:flex;align-items:center;gap:7px}
+.uc{display:flex;align-items:center;gap:6px;background:var(--al);border-radius:99px;padding:5px 12px 5px 5px;cursor:pointer;border:1.5px solid transparent;transition:all .2s;max-width:180px}
+.uc:active{background:#e0f2fe;border-color:var(--ac)}
+.av{width:28px;height:28px;border-radius:50%;background:var(--ac);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.uname{font-size:12px;color:var(--ad);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* PAGES */
+.page{display:none;padding-top:calc(var(--top) + var(--safe-t) + 8px);padding-bottom:calc(var(--nav) + var(--safe-b) + 16px);min-height:100vh}
+.page.active{display:block;animation:fadeIn .2s ease both}
+
+/* BNAV */
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:300;background:rgba(255,255,255,.95);border-top:1px solid var(--g200);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);height:calc(var(--nav) + var(--safe-b));display:flex;align-items:flex-start;padding-top:4px;max-width:900px;margin:0 auto}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--g400);font-size:10px;font-weight:500;transition:color .2s;padding:4px 2px 0;position:relative;touch-action:manipulation;min-width:0}
+.nb svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.nb.on{color:var(--ac)}
+.nb.on svg{transform:scale(1.1)}
+.nb-badge{position:absolute;top:4px;right:calc(50% - 20px);min-width:16px;height:16px;background:var(--r);border-radius:99px;font-size:10px;font-weight:700;color:#fff;display:none;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff}
+.nb-badge.show{display:flex}
+
+.inn{padding:12px 14px}
+@media(min-width:768px){.inn{padding:16px 20px}}
+
+/* CARD */
+.card{background:var(--white);border-radius:var(--rad);border:1px solid var(--g200);padding:14px;box-shadow:var(--sh)}
+.card+.card{margin-top:10px}
+
+/* STATS GRID */
+.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.sc{border-radius:var(--rads);padding:12px 8px;text-align:center;border:1px solid transparent}
+.sc .n{font-size:26px;font-weight:800;line-height:1}
+.sc .l{font-size:11px;margin-top:4px;font-weight:500}
+.sc.g{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#bbf7d0}.sc.g .n,.sc.g .l{color:var(--g)}
+.sc.y{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-color:#fde68a}.sc.y .n,.sc.y .l{color:var(--y)}
+.sc.r{background:linear-gradient(135deg,#fff5f5,#fee2e2);border-color:#fecaca}.sc.r .n,.sc.r .l{color:var(--r)}
+@media(max-width:400px){.sc .n{font-size:22px}}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:var(--rads);font-size:14px;font-weight:600;transition:all .15s;white-space:nowrap;line-height:1;touch-action:manipulation}
+.btn:active{transform:scale(.95)}
+.bp{background:var(--ac);color:#fff;box-shadow:0 2px 8px rgba(14,165,233,.3)}.bp:active{background:var(--ad)}
+.bo{border:1.5px solid var(--g200);color:var(--g800);background:var(--white)}.bo:active{border-color:var(--ac);color:var(--ac)}
+.bg{background:var(--g);color:#fff}
+.br{background:var(--rb);color:var(--r)}
+.bor{background:var(--ob);color:var(--or)}
+.bsm{padding:7px 13px;font-size:13px}
+.bxs{padding:4px 9px;font-size:12px}
+.bic{width:34px;height:34px;padding:0;border-radius:var(--rads)}
+
+/* ASSIGNMENT STATUS BUTTONS */
+.abtns{display:flex;gap:4px}
+.asb{flex:1;padding:7px 2px;border-radius:var(--rads);font-size:11px;font-weight:700;border:2px solid transparent;transition:all .12s;text-align:center;min-width:0;touch-action:manipulation}
+.asb:active{transform:scale(.9)}
+.asb.done{background:var(--gb);color:var(--g)}.asb.done.on{background:var(--g);color:#fff;border-color:var(--g)}
+.asb.late{background:var(--yb);color:var(--y)}.asb.late.on{background:var(--y);color:#fff;border-color:var(--y)}
+.asb.miss{background:var(--rb);color:var(--r)}.asb.miss.on{background:var(--r);color:#fff;border-color:var(--r)}
+
+/* SCORE INPUT */
+.score-inp{width:52px;padding:6px 6px;border:1.5px solid var(--g200);border-radius:var(--rads);font-size:13px;font-weight:700;text-align:center;outline:none;background:#fff;color:var(--g800);transition:border .15s}
+.score-inp:focus{border-color:var(--ac)}
+.score-inp.has-val{border-color:var(--ac);background:var(--al);color:var(--ad)}
+
+/* STUDENT ROW */
+.srow{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--g100)}
+.srow:last-child{border-bottom:none}
+.snum{width:24px;height:24px;border-radius:50%;background:var(--g100);color:var(--g600);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.sname{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+
+/* ASSIGNMENT CARD */
+.acard{background:var(--white);border-radius:var(--rad);border:1.5px solid var(--g200);padding:14px;box-shadow:var(--sh);margin-bottom:10px;cursor:pointer;transition:all .15s}
+.acard:active{border-color:var(--ac);transform:scale(.99)}
+.acard-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.acard-icon{width:40px;height:40px;border-radius:var(--rads);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.acard-info{flex:1;min-width:0}
+.acard-title{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acard-meta{font-size:12px;color:var(--g600);margin-top:2px}
+.acard-progress{height:5px;border-radius:99px;background:var(--g100);overflow:hidden;margin-top:8px}
+.acard-prog-fill{height:100%;border-radius:99px;transition:width .4s ease}
+.acard-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+
+/* DEADLINE BADGE */
+.dl-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700}
+.dl-ok{background:var(--gb);color:var(--g)}
+.dl-warn{background:var(--yb);color:var(--y)}
+.dl-over{background:var(--rb);color:var(--r)}
+
+/* TAG */
+.tag{padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600}
+.ta{background:var(--al);color:var(--ad)}
+.tg{background:var(--g100);color:var(--g600)}
+.tgr{background:var(--gb);color:var(--g)}
+.ty{background:var(--yb);color:var(--y)}
+.tr{background:var(--rb);color:var(--r)}
+
+/* CLASS CARD */
+.ccard{background:var(--white);border-radius:var(--rad);border:1.5px solid var(--g200);padding:13px;box-shadow:var(--sh);margin-bottom:10px;display:flex;align-items:center;gap:12px;transition:border-color .15s}
+.ccard:active{border-color:var(--ac)}
+.cicon{width:42px;height:42px;border-radius:var(--rads);background:var(--al);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.cinfo{flex:1;min-width:0}
+.cinfo h3{font-size:14px;font-weight:700}
+.cinfo p{font-size:12px;color:var(--g600);margin-top:2px}
+.ctags{margin-top:6px;display:flex;gap:5px;flex-wrap:wrap}
+
+/* TODAY BANNER */
+.today-banner{background:linear-gradient(135deg,var(--ac),var(--ad));color:#fff;border-radius:var(--rad);padding:16px;margin-bottom:14px}
+.today-banner h2{font-size:16px;font-weight:800}
+.today-banner p{font-size:13px;opacity:.85;margin-top:3px}
+
+/* ALERT CARD */
+.alert-card{border-radius:var(--rads);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:opacity .15s}
+.alert-card:active{opacity:.8}
+.alert-warn{background:var(--yb);border:1px solid #fde68a}
+.alert-over{background:var(--rb);border:1px solid #fecaca}
+.alert-icon{font-size:20px;flex-shrink:0}
+.alert-info{flex:1;min-width:0}
+.alert-title{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.alert-sub{font-size:12px;margin-top:2px;opacity:.8}
+
+/* FORMS */
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:12px;font-weight:600;color:var(--g600);margin-bottom:5px}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1.5px solid var(--g200);border-radius:var(--rads);font-size:15px;outline:none;transition:border .15s,box-shadow .15s;background:#fff;color:var(--g800)}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(14,165,233,.1)}
+.fg textarea{resize:vertical;min-height:80px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:400px){.frow{grid-template-columns:1fr}}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.5);align-items:flex-end;justify-content:center;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.overlay.open{display:flex;animation:fadeIn .2s ease}
+.modal{background:var(--white);border-radius:20px 20px 0 0;padding:0 20px max(20px,var(--safe-b));width:100%;max-width:900px;max-height:93vh;overflow-y:auto;-webkit-overflow-scrolling:touch;animation:slideUp .28s cubic-bezier(.34,1.1,.64,1) both}
+.mh2{width:40px;height:4px;background:var(--g200);border-radius:99px;margin:12px auto 16px}
+.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.mh h2{font-size:17px;font-weight:800}
+.mf{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--g100)}
+@media(min-width:600px){.overlay{align-items:center;padding:20px}.modal{border-radius:var(--rad);max-width:540px;max-height:90vh;animation:fadeIn .2s ease}.mh2{display:none}}
+
+/* TOAST */
+#toast{position:fixed;bottom:calc(var(--nav) + var(--safe-b) + 12px);left:50%;transform:translateX(-50%) translateY(12px);padding:10px 20px;border-radius:99px;font-size:13px;font-weight:600;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.15);max-width:calc(100vw - 32px);text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{background:var(--g);color:#fff}
+#toast.err{background:var(--r);color:#fff}
+#toast.info{background:var(--g800);color:#fff}
+#toast.warn{background:var(--y);color:#fff}
+
+/* REPORT BAR */
+.rrow{padding:10px;border-radius:var(--rads);cursor:pointer;transition:background .15s}
+.rrow:active{background:var(--g50)}
+.rlbl{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.rbg{height:7px;border-radius:99px;background:var(--g100);overflow:hidden}
+.rfill{height:100%;border-radius:99px;transition:width .5s ease}
+.rsub{font-size:11px;color:var(--g600);margin-top:4px}
+
+/* FILE DROP */
+.fdrop{border:2px dashed var(--g200);border-radius:var(--rads);padding:16px;text-align:center;cursor:pointer;background:var(--g50);transition:all .15s}
+.fdrop:active,.fdrop.drag{border-color:var(--ac);background:var(--al)}
+.fdrop input[type=file]{display:none}
+
+/* DCHIPS */
+.dchips{display:flex;gap:5px;flex-wrap:wrap}
+.dchip{padding:5px 10px;border-radius:99px;font-size:12px;font-weight:600;border:1.5px solid var(--g200);cursor:pointer;background:var(--white);color:var(--g600);user-select:none;touch-action:manipulation}
+.dchip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+
+/* EMPTY */
+.empty{text-align:center;padding:36px 16px;color:var(--g400)}
+.empty .ei{font-size:44px;margin-bottom:10px}
+.empty p{font-size:14px;font-weight:500}
+.empty small{font-size:12px;margin-top:4px;display:block}
+
+/* EXPORT BAR */
+.exbar{display:flex;align-items:center;gap:10px;background:var(--ob);border-radius:var(--rads);padding:10px 12px;margin-bottom:12px;border:1px solid #fed7aa}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="sp-logo">📝</div>
+  <div class="sp-title">AssignCheck Pro</div>
+  <div class="sp-sub">ระบบเช็คงานและจัดการห้องเรียน</div>
+  <div class="sp-spin"></div>
+</div>
+
+<div id="toast"></div>
+<div id="saving"><div class="ss"></div><span>กำลังบันทึก...</span></div>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="lb">
+    <div class="lb-logo">📝</div>
+    <div class="lb-title">AssignCheck Pro</div>
+    <div class="lb-sub">เข้าสู่ระบบเพื่อจัดการงานและห้องเรียน</div>
+    <div class="lb-err" id="lerr"></div>
+    <button class="g-btn" onclick="signInGoogle()" id="gbtn">
+      <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      เข้าสู่ระบบด้วย Google
+    </button>
+    <div class="lb-note">ข้อมูลการเช็คงานเก็บแยกตาม Google Account ของคุณ</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main">
+  <div class="topbar">
+    <div class="logo">📝 AssignCheck Pro</div>
+    <div class="uc" onclick="openAcc()">
+      <div class="av" id="uav">?</div>
+      <span class="uname" id="uname">...</span>
+      <span style="font-size:10px;color:var(--ac);margin-left:2px">▾</span>
+    </div>
+  </div>
+
+  <!-- PAGE: หน้าหลัก (งานวันนี้) -->
+  <div class="page" id="page-home">
+    <div class="inn">
+      <div class="today-banner">
+        <h2 id="home-date">วันนี้</h2>
+        <p id="home-sub">กำลังโหลด...</p>
+      </div>
+      <!-- แจ้งเตือนงานใกล้หมดและเกินกำหนด -->
+      <div id="alerts-section"></div>
+      <!-- สถิติรวมทุกวิชา -->
+      <div id="home-stats"></div>
+      <!-- งานล่าสุด -->
+      <div style="font-size:13px;font-weight:700;color:var(--g600);margin-bottom:8px" id="recent-lbl">งานล่าสุด</div>
+      <div id="recent-assignments"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: ห้องเรียน -->
+  <div class="page" id="page-classes">
+    <div class="inn">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-size:20px;font-weight:800">ห้องเรียน</div>
+          <div style="font-size:12px;color:var(--g600);margin-top:2px">จัดการห้องและรายชื่อ</div>
+        </div>
+        <button class="btn bp bsm" onclick="openNewCls()">+ เพิ่มห้อง</button>
+      </div>
+      <div id="cls-list"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: เช็คงาน -->
+  <div class="page" id="page-assign">
+    <div class="inn">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:20px;font-weight:800">เช็คงาน</div>
+        <button class="btn bp bsm" onclick="openNewAssign()">+ สั่งงาน</button>
+      </div>
+      <!-- เลือกห้อง -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="fg" style="margin:0">
+          <label>เลือกห้องเรียน</label>
+          <select id="assign-cls" onchange="onAssignClsCh()">
+            <option value="">-- กรุณาเลือก --</option>
+          </select>
+        </div>
+      </div>
+      <div id="assign-list">
+        <div class="empty"><div class="ei">👆</div><p>เลือกห้องเรียนก่อน</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: รายงาน -->
+  <div class="page" id="page-report">
+    <div class="inn">
+      <div style="margin-bottom:12px">
+        <div style="font-size:20px;font-weight:800">รายงาน</div>
+        <div style="font-size:12px;color:var(--g600);margin-top:2px">สรุปการส่งงานรายห้องและรายคน</div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="fg" style="margin:0">
+          <label>เลือกห้องเรียน</label>
+          <select id="rpt-cls" onchange="renderReport()">
+            <option value="">-- เลือกห้อง --</option>
+          </select>
+        </div>
+      </div>
+      <div class="exbar" id="exbar" style="display:none">
+        <span style="font-size:16px">📊</span>
+        <p style="flex:1;font-size:13px;color:var(--or);font-weight:500">ส่งออกข้อมูลเป็น CSV</p>
+        <button class="btn bor bsm" onclick="doExport()">⬇ Export</button>
+      </div>
+      <div id="rpt-body">
+        <div class="empty"><div class="ei">📊</div><p>เลือกห้องเพื่อดูรายงาน</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bnav">
+    <button class="nb on" id="nb-home" onclick="go('home')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>หน้าหลัก
+    </button>
+    <button class="nb" id="nb-classes" onclick="go('classes')">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>ห้องเรียน
+    </button>
+    <button class="nb" id="nb-assign" onclick="go('assign')">
+      <div class="nb-badge" id="overdue-badge"></div>
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>เช็คงาน
+    </button>
+    <button class="nb" id="nb-report" onclick="go('report')">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>รายงาน
+    </button>
+  </nav>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Modal: บัญชี -->
+<div class="overlay" id="m-acc">
+  <div class="modal">
+    <div class="mh2"></div>
+    <div class="mh"><h2>บัญชีของคุณ</h2><button class="btn bic bo" onclick="closeM('m-acc')">✕</button></div>
+    <div style="background:var(--al);border-radius:var(--rads);padding:14px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div class="av" style="width:42px;height:42px;font-size:16px" id="acc-av">?</div>
+        <div>
+          <div style="font-weight:700;font-size:15px" id="acc-name">-</div>
+          <div style="font-size:12px;color:var(--g600)" id="acc-email">-</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--ad)">ข้อมูลเก็บใน Firebase แยกตาม Google Account</div>
+    </div>
+    <div class="mf" style="border:none;padding:0">
+      <button class="btn bo" onclick="closeM('m-acc')">ปิด</button>
+      <button class="btn br" onclick="doLogout()">🚪 ออกจากระบบ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: สร้างห้องเรียน -->
+<div class="overlay" id="m-cls">
+  <div class="modal">
+    <div class="mh2"></div>
+    <div class="mh"><h2 id="m-cls-t">เพิ่มห้องเรียน</h2><button class="btn bic bo" onclick="closeM('m-cls')">✕</button></div>
+    <input type="hidden" id="eid">
+    <div class="frow">
+      <div class="fg"><label>วิชา *</label><input id="f-subj" placeholder="คณิตศาสตร์" autocomplete="off"></div>
+      <div class="fg"><label>ห้องเรียน *</label><input id="f-grade" placeholder="ม.1/1" autocomplete="off"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>ปีการศึกษา</label><input id="f-year" placeholder="2568" autocomplete="off"></div>
+      <div class="fg"><label>ไอคอน</label>
+        <select id="f-icon">
+          <option value="📐">📐 คณิตศาสตร์</option>
+          <option value="📝">📝 ภาษาไทย</option>
+          <option value="🔬">🔬 วิทยาศาสตร์</option>
+          <option value="🌍">🌍 สังคมศึกษา</option>
+          <option value="📖">📖 ภาษาอังกฤษ</option>
+          <option value="🎨">🎨 ศิลปะ</option>
+          <option value="⚽">⚽ พลศึกษา</option>
+          <option value="💻">💻 คอมพิวเตอร์</option>
+          <option value="🎵">🎵 ดนตรี</option>
+          <option value="📋">📋 อื่นๆ</option>
+        </select>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn bo" onclick="closeM('m-cls')">ยกเลิก</button>
+      <button class="btn bp" onclick="saveCls()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: รายชื่อนักเรียน -->
+<div class="overlay" id="m-stu">
+  <div class="modal">
+    <div class="mh2"></div>
+    <div class="mh"><h2 id="m-stu-t">รายชื่อนักเรียน</h2><button class="btn bic bo" onclick="closeM('m-stu')">✕</button></div>
+    <input type="hidden" id="s-cid">
+    <div style="background:var(--g50);border-radius:var(--rads);padding:12px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:7px">➕ เพิ่มรายคน</div>
+      <div style="display:flex;gap:7px">
+        <input id="s-name" placeholder="ชื่อ-นามสกุล" autocomplete="off"
+          style="flex:1;padding:9px 10px;border:1.5px solid var(--g200);border-radius:var(--rads);outline:none;font-size:14px;background:#fff"
+          onkeydown="if(event.key==='Enter')addStu()">
+        <button class="btn bp bsm" onclick="addStu()">เพิ่ม</button>
+      </div>
+    </div>
+    <div style="background:var(--g50);border-radius:var(--rads);padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:7px">📥 นำเข้าจากไฟล์ (.txt/.csv)</div>
+      <div class="fdrop" id="fdrop" onclick="document.getElementById('finp').click()" ondragover="onDrag(event,1)" ondragleave="onDrag(event,0)" ondrop="onDrop(event)">
+        <input type="file" id="finp" accept=".txt,.csv" onchange="onFSel(event)">
+        <div style="font-size:28px;margin-bottom:5px">📂</div>
+        <div style="font-size:13px;color:var(--g600);font-weight:600">กดเพื่อเลือกไฟล์</div>
+        <div style="font-size:11px;color:var(--g400);margin-top:3px">ชื่อต่อบรรทัด หรือ CSV: เลขที่,ชื่อ</div>
+      </div>
+      <div id="fprev" style="display:none;margin-top:8px">
+        <div style="font-size:13px;font-weight:700;color:var(--g);margin-bottom:5px" id="fpc"></div>
+        <div style="max-height:100px;overflow-y:auto;font-size:12px;color:var(--g600);background:#fff;border:1px solid var(--g200);border-radius:var(--rads);padding:7px" id="fpl"></div>
+        <div style="display:flex;gap:7px;margin-top:7px">
+          <button class="btn bg bsm" onclick="confirmImp()">✓ นำเข้า</button>
+          <button class="btn bo bsm" onclick="cancelImp()">ยกเลิก</button>
+        </div>
+      </div>
+    </div>
+    <div id="s-list"></div>
+    <div class="mf">
+      <button class="btn br bsm" onclick="delCls()">🗑 ลบห้องนี้</button>
+      <button class="btn bp" onclick="closeM('m-stu');renderAll()">✓ เสร็จสิ้น</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: สั่งงานใหม่ / แก้ไขงาน -->
+<div class="overlay" id="m-assign">
+  <div class="modal">
+    <div class="mh2"></div>
+    <div class="mh"><h2 id="m-assign-t">สั่งงานใหม่</h2><button class="btn bic bo" onclick="closeM('m-assign')">✕</button></div>
+    <input type="hidden" id="a-eid">
+    <input type="hidden" id="a-clsid">
+    <div class="fg"><label>ห้องเรียน *</label>
+      <select id="a-cls-sel">
+        <option value="">-- เลือกห้อง --</option>
+      </select>
+    </div>
+    <div class="fg"><label>ชื่องาน *</label>
+      <input id="a-title" placeholder="เช่น แบบฝึกหัดบทที่ 3" autocomplete="off">
+    </div>
+    <div class="frow">
+      <div class="fg"><label>กำหนดส่ง *</label>
+        <input id="a-due" type="date">
+      </div>
+      <div class="fg"><label>คะแนนเต็ม</label>
+        <input id="a-max" type="number" placeholder="10" min="0" max="999">
+      </div>
+    </div>
+    <div class="fg"><label>รายละเอียด (ไม่บังคับ)</label>
+      <textarea id="a-desc" placeholder="คำอธิบายงาน หรือหมายเหตุ..."></textarea>
+    </div>
+    <div class="mf">
+      <button class="btn bo" onclick="closeM('m-assign')">ยกเลิก</button>
+      <button class="btn bp" onclick="saveAssign()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: เช็คงานรายคน -->
+<div class="overlay" id="m-check">
+  <div class="modal">
+    <div class="mh2"></div>
+    <div class="mh">
+      <div>
+        <h2 id="m-check-t">เช็คงาน</h2>
+        <div style="font-size:12px;color:var(--g600);margin-top:2px" id="m-check-sub"></div>
+      </div>
+      <button class="btn bic bo" onclick="closeM('m-check')">✕</button>
+    </div>
+    <!-- งาน info -->
+    <div id="m-check-info" style="background:var(--al);border-radius:var(--rads);padding:12px;margin-bottom:14px"></div>
+    <!-- สถิติ -->
+    <div id="m-check-stats" style="margin-bottom:12px"></div>
+    <!-- Quick actions -->
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button class="btn bg bsm" style="flex:1" onclick="markAllAssign('done')">✓ ส่งทุกคน</button>
+      <button class="btn bo bsm" style="flex:1" onclick="clearAllAssign()">✕ ล้าง</button>
+      <button class="btn bor bsm" style="flex:1" onclick="markUnsubmitted()">ไม่ส่ง→ Miss</button>
+    </div>
+    <!-- รายชื่อ -->
+    <div id="m-check-list"></div>
+    <div class="mf">
+      <button class="btn bo" onclick="closeM('m-check')">ปิด</button>
+      <button class="btn bp" onclick="saveCheckAndClose()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: รายงานรายคน -->
+<div class="overlay" id="m-stu-rpt">
+  <div class="modal">
+    <div class="mh2"></div>
+    <div class="mh"><h2 id="m-stu-rpt-t">รายงานรายคน</h2><button class="btn bic bo" onclick="closeM('m-stu-rpt')">✕</button></div>
+    <div id="m-stu-rpt-body"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  FIREBASE CONFIG — วาง config ของคุณตรงนี้
+// ════════════════════════════════════════════
+var firebaseConfig = {
+  apiKey:            "AIzaSyCBUwudmX6EMj3PHXFmO1ppprxVLdFYUmY",
+  authDomain:        "classcheck-pro-b708d.firebaseapp.com",
+  projectId:         "classcheck-pro-b708d",
+  storageBucket:     "classcheck-pro-b708d.firebasestorage.app",
+  messagingSenderId: "480522053703",
+  appId:             "1:480522053703:web:3603f84879c9e31e476962"
+};
+
+firebase.initializeApp(firebaseConfig);
+var auth = firebase.auth();
+var db   = firebase.firestore();
+
+// ═══ STATE ═══
+// classes: [{id, subject, grade, year, icon, students:[{num,name}]}]
+// assignments: [{id, classId, title, due, maxScore, desc, createdAt}]
+// submissions: { assignId: { studentNum: { status:'done'|'late'|'miss', score, note } } }
+var S = { classes:[], assignments:[], submissions:{} };
+var ME = null;
+var saveTimer = null;
+var pendImp = [];
+var currentCheckAssignId = null;
+
+var SL = { done:'ส่งแล้ว', late:'ส่งช้า', miss:'ไม่ส่ง' };
+var SC = { done:'var(--g)', late:'var(--y)', miss:'var(--r)' };
+var SBG = { done:'var(--gb)', late:'var(--yb)', miss:'var(--rb)' };
+
+// ═══ FIREBASE AUTH ═══
+auth.onAuthStateChanged(function(user) {
+  if (user) {
+    ME = { uid:user.uid, email:user.email, name:user.displayName||user.email.split('@')[0], photo:user.photoURL||null };
+    hideSplash();
+    document.getElementById('login').classList.remove('show');
+    loadFromFirebase();
+  } else {
+    hideSplash();
+    document.getElementById('login').classList.add('show');
+    document.getElementById('main').style.display='none';
+  }
+});
+
+function hideSplash(){ setTimeout(function(){ document.getElementById('splash').classList.add('hide'); },500); }
+
+function signInGoogle(){
+  var btn=document.getElementById('gbtn'); btn.disabled=true;
+  var provider=new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+  auth.signInWithPopup(provider).catch(function(e){
+    btn.disabled=false;
+    var el=document.getElementById('lerr'); el.textContent=e.message; el.style.display='block';
+    setTimeout(function(){el.style.display='none';},5000);
+  });
+}
+
+function doLogout(){
+  closeM('m-acc');
+  auth.signOut().then(function(){ ME=null; S={classes:[],assignments:[],submissions:{}}; toast('ออกจากระบบแล้ว','info'); });
+}
+
+// ═══ FIRESTORE ═══
+function docRef(){ return db.collection('assigncheck_users').doc(ME.uid); }
+
+function loadFromFirebase(){
+  docRef().get().then(function(doc){
+    if(doc.exists){
+      var d=doc.data();
+      S.classes     = d.classes     || [];
+      S.assignments = d.assignments || [];
+      S.submissions = d.submissions || {};
+    } else {
+      S={classes:[],assignments:[],submissions:{}};
+      docRef().set(S);
+    }
+    showApp();
+  }).catch(function(e){ toast('โหลดไม่สำเร็จ: '+e.message,'err'); showApp(); });
+}
+
+function showApp(){
+  document.getElementById('main').style.display='block';
+  var avEl=document.getElementById('uav');
+  if(ME.photo){ avEl.innerHTML='<img src="'+ME.photo+'" alt="">'; }
+  else{ avEl.textContent=(ME.name||ME.email).substring(0,2).toUpperCase(); }
+  document.getElementById('uname').textContent=ME.name||ME.email;
+  go('home');
+}
+
+function cloudSave(msg){
+  if(!ME) return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(function(){
+    document.getElementById('saving').classList.add('show');
+    docRef().set({
+      classes:S.classes, assignments:S.assignments, submissions:S.submissions
+    }).then(function(){
+      document.getElementById('saving').classList.remove('show');
+      if(msg) toast(msg,'ok');
+    }).catch(function(e){
+      document.getElementById('saving').classList.remove('show');
+      toast('บันทึกไม่สำเร็จ','err');
+    });
+  },1500);
+}
+
+// ═══ NAVIGATE ═══
+function go(page){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on')});
+  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('nb-'+page).classList.add('on');
+  if(page==='home')    renderHome();
+  if(page==='classes') renderCls();
+  if(page==='assign')  {syncClsSel();renderAssignList();}
+  if(page==='report')  {syncClsSel2();renderReport();}
+}
+function renderAll(){ renderHome(); renderCls(); syncClsSel(); renderAssignList(); syncClsSel2(); renderReport(); updateOverdueBadge(); }
+
+// ═══ HOME ═══
+function renderHome(){
+  var td=new Date(); var tdf=fmt(td);
+  document.getElementById('home-date').textContent='วัน'+getDayTH(td)+' ที่ '+td.getDate()+' '+getMonthTH(td);
+  // สถิติรวมทุกวิชา
+  var totalA=S.assignments.length;
+  var totalDone=0,totalMiss=0,totalLate=0;
+  S.assignments.forEach(function(a){
+    var sub=S.submissions[a.id]||{};
+    Object.values(sub).forEach(function(v){
+      if(v.status==='done')totalDone++;
+      else if(v.status==='late')totalLate++;
+      else if(v.status==='miss')totalMiss++;
+    });
+  });
+  document.getElementById('home-sub').textContent='งานทั้งหมด '+totalA+' ชิ้น ทุกวิชา';
+  document.getElementById('home-stats').innerHTML=
+    '<div class="sgrid" style="margin-bottom:16px">'+
+    '<div class="sc g"><div class="n">'+totalDone+'</div><div class="l">ส่งแล้ว</div></div>'+
+    '<div class="sc y"><div class="n">'+totalLate+'</div><div class="l">ส่งช้า</div></div>'+
+    '<div class="sc r"><div class="n">'+totalMiss+'</div><div class="l">ไม่ส่ง</div></div>'+
+    '</div>';
+
+  // แจ้งเตือนงานใกล้หมดและเกินกำหนด
+  var alerts=[];
+  var now=new Date(); now.setHours(0,0,0,0);
+  S.assignments.forEach(function(a){
+    var due=new Date(a.due+'T00:00:00'); var diff=Math.round((due-now)/(1000*60*60*24));
+    if(diff<0){ alerts.push({type:'over',a:a,diff:Math.abs(diff)}); }
+    else if(diff<=3){ alerts.push({type:'warn',a:a,diff:diff}); }
+  });
+  var alertsHtml='';
+  if(alerts.length){
+    alertsHtml='<div style="font-size:13px;font-weight:700;color:var(--g600);margin-bottom:8px">⚠ แจ้งเตือน</div>';
+    alerts.slice(0,5).forEach(function(al){
+      var cls=S.classes.find(function(c){return c.id===al.a.classId});
+      var clsName=cls?esc(cls.subject)+' '+esc(cls.grade):'';
+      if(al.type==='over'){
+        alertsHtml+='<div class="alert-card alert-over" onclick="openCheckModal(\''+al.a.id+'\')">'+
+          '<div class="alert-icon">🚨</div>'+
+          '<div class="alert-info"><div class="alert-title">'+esc(al.a.title)+'</div>'+
+          '<div class="alert-sub" style="color:var(--r)">เกินกำหนด '+al.diff+' วัน · '+clsName+'</div></div></div>';
+      } else {
+        alertsHtml+='<div class="alert-card alert-warn" onclick="openCheckModal(\''+al.a.id+'\')">'+
+          '<div class="alert-icon">⏰</div>'+
+          '<div class="alert-info"><div class="alert-title">'+esc(al.a.title)+'</div>'+
+          '<div class="alert-sub" style="color:var(--y)">'+(al.diff===0?'ครบกำหนดวันนี้':'อีก '+al.diff+' วัน')+'· '+clsName+'</div></div></div>';
+      }
+    });
+  }
+  document.getElementById('alerts-section').innerHTML=alertsHtml?'<div style="margin-bottom:14px">'+alertsHtml+'</div>':'';
+
+  // งานล่าสุด 5 ชิ้น
+  var recent=S.assignments.slice().sort(function(a,b){return b.createdAt>a.createdAt?1:-1}).slice(0,5);
+  if(!recent.length){
+    document.getElementById('recent-lbl').style.display='none';
+    document.getElementById('recent-assignments').innerHTML='<div class="empty"><div class="ei">📝</div><p>ยังไม่มีงาน</p><small>ไปที่ "เช็คงาน" เพื่อสั่งงาน</small></div>';
+    return;
+  }
+  document.getElementById('recent-lbl').style.display='block';
+  document.getElementById('recent-assignments').innerHTML=recent.map(function(a){ return renderACard(a); }).join('');
+}
+
+function renderACard(a){
+  var cls=S.classes.find(function(c){return c.id===a.classId});
+  var clsName=cls?esc(cls.subject)+' '+esc(cls.grade):'-';
+  var clsIcon=cls?(cls.icon||'📋'):'📋';
+  var totalStu=cls?(cls.students||[]).length:0;
+  var sub=S.submissions[a.id]||{};
+  var done=0,late=0,miss=0;
+  Object.values(sub).forEach(function(v){ if(v.status==='done')done++;else if(v.status==='late')late++;else if(v.status==='miss')miss++; });
+  var checked=done+late+miss;
+  var pct=totalStu>0?Math.round(checked/totalStu*100):0;
+  var submitPct=totalStu>0?Math.round((done+late)/totalStu*100):0;
+  var dlClass=getDLClass(a.due);
+  var progColor=submitPct>=80?'var(--g)':submitPct>=50?'var(--y)':'var(--r)';
+  return '<div class="acard" onclick="openCheckModal(\''+a.id+'\')">'+
+    '<div class="acard-head">'+
+      '<div class="acard-icon" style="background:var(--al)">'+esc(clsIcon)+'</div>'+
+      '<div class="acard-info">'+
+        '<div class="acard-title">'+esc(a.title)+'</div>'+
+        '<div class="acard-meta">'+clsName+' · คะแนนเต็ม '+a.maxScore+'</div>'+
+      '</div>'+
+      '<span class="dl-badge '+dlClass+'">📅 '+a.due+'</span>'+
+    '</div>'+
+    '<div class="acard-progress"><div class="acard-prog-fill" style="width:'+submitPct+'%;background:'+progColor+'"></div></div>'+
+    '<div class="acard-tags">'+
+      '<span class="tag tgr">ส่งแล้ว '+done+'</span>'+
+      '<span class="tag ty">ส่งช้า '+late+'</span>'+
+      '<span class="tag tr">ไม่ส่ง '+miss+'</span>'+
+      '<span class="tag tg">ยังไม่เช็ค '+(totalStu-checked)+'</span>'+
+    '</div>'+
+  '</div>';
+}
+
+function getDLClass(due){
+  var now=new Date(); now.setHours(0,0,0,0);
+  var d=new Date(due+'T00:00:00');
+  var diff=Math.round((d-now)/(1000*60*60*24));
+  if(diff<0) return 'dl-over';
+  if(diff<=3) return 'dl-warn';
+  return 'dl-ok';
+}
+
+function updateOverdueBadge(){
+  var now=new Date(); now.setHours(0,0,0,0);
+  var cnt=S.assignments.filter(function(a){ return new Date(a.due+'T00:00:00')<now; }).length;
+  var el=document.getElementById('overdue-badge');
+  if(cnt>0){ el.textContent=cnt; el.classList.add('show'); } else { el.classList.remove('show'); }
+}
+
+// ═══ CLASSES ═══
+function renderCls(){
+  var el=document.getElementById('cls-list');
+  if(!S.classes.length){ el.innerHTML='<div class="empty"><div class="ei">🏫</div><p>ยังไม่มีห้องเรียน</p><small>กด "+ เพิ่มห้อง"</small></div>'; return; }
+  el.innerHTML=S.classes.map(function(c){
+    var cnt=c.students?c.students.length:0;
+    var aCnt=S.assignments.filter(function(a){return a.classId===c.id;}).length;
+    return '<div class="ccard">'+
+      '<div class="cicon">'+esc(c.icon||'📋')+'</div>'+
+      '<div class="cinfo"><h3>'+esc(c.subject)+' '+esc(c.grade)+'</h3><p>ปีการศึกษา '+esc(c.year)+'</p>'+
+      '<div class="ctags"><span class="tag ta">👤 '+cnt+' คน</span><span class="tag tg">📝 '+aCnt+' งาน</span></div></div>'+
+      '<div style="display:flex;gap:5px">'+
+      '<button class="btn bic bo" title="แก้ไข" onclick="openEditCls(\''+c.id+'\');event.stopPropagation()">✏️</button>'+
+      '<button class="btn bic bo" title="รายชื่อ" onclick="openStu(\''+c.id+'\');event.stopPropagation()">👤</button>'+
+      '</div></div>';
+  }).join('');
+}
+
+// ═══ SYNC SELECT ═══
+function syncClsSel(){
+  var sel=document.getElementById('assign-cls'); var cur=sel.value;
+  sel.innerHTML='<option value="">-- เลือกห้อง --</option>'+S.classes.map(function(c){ return '<option value="'+c.id+'">'+esc(c.icon||'')+' '+esc(c.subject)+' '+esc(c.grade)+'</option>'; }).join('');
+  if(cur) sel.value=cur;
+  // sync modal select
+  var mSel=document.getElementById('a-cls-sel');
+  mSel.innerHTML='<option value="">-- เลือกห้อง --</option>'+S.classes.map(function(c){ return '<option value="'+c.id+'">'+esc(c.icon||'')+' '+esc(c.subject)+' '+esc(c.grade)+'</option>'; }).join('');
+}
+function syncClsSel2(){
+  var sel=document.getElementById('rpt-cls'); var cur=sel.value;
+  sel.innerHTML='<option value="">-- เลือกห้อง --</option>'+S.classes.map(function(c){ return '<option value="'+c.id+'">'+esc(c.icon||'')+' '+esc(c.subject)+' '+esc(c.grade)+'</option>'; }).join('');
+  if(cur) sel.value=cur;
+}
+
+// ═══ ASSIGN LIST ═══
+function onAssignClsCh(){ renderAssignList(); }
+function renderAssignList(){
+  var cid=document.getElementById('assign-cls').value;
+  var el=document.getElementById('assign-list');
+  if(!cid){ el.innerHTML='<div class="empty"><div class="ei">👆</div><p>เลือกห้องเรียนก่อน</p></div>'; return; }
+  var assigns=S.assignments.filter(function(a){return a.classId===cid;}).sort(function(a,b){return a.due>b.due?1:-1});
+  if(!assigns.length){ el.innerHTML='<div class="empty"><div class="ei">📝</div><p>ยังไม่มีงานในห้องนี้</p><small>กด "+ สั่งงาน" เพื่อเพิ่ม</small></div>'; return; }
+  el.innerHTML=assigns.map(function(a){
+    return '<div style="position:relative">'+renderACard(a)+
+      '<button class="btn bic bo" style="position:absolute;top:10px;right:10px;z-index:1;background:rgba(255,255,255,.9)" onclick="openEditAssign(\''+a.id+'\');event.stopPropagation()">✏️</button>'+
+    '</div>';
+  }).join('');
+}
+
+// ═══ OPEN CHECK MODAL ═══
+function openCheckModal(assignId){
+  var a=S.assignments.find(function(x){return x.id===assignId}); if(!a) return;
+  var cls=S.classes.find(function(c){return c.id===a.classId});
+  if(!cls){ toast('ไม่พบห้องเรียน','err'); return; }
+  currentCheckAssignId=assignId;
+  document.getElementById('m-check-t').textContent=esc(a.title);
+  document.getElementById('m-check-sub').textContent=esc(cls.subject)+' '+esc(cls.grade)+' · กำหนดส่ง '+a.due;
+  // info
+  document.getElementById('m-check-info').innerHTML=
+    '<div style="font-size:13px;font-weight:700;margin-bottom:6px">'+esc(a.title)+'</div>'+
+    (a.desc?'<div style="font-size:12px;color:var(--g600);margin-bottom:6px">'+esc(a.desc)+'</div>':'')+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+    '<span class="dl-badge '+getDLClass(a.due)+'">📅 '+a.due+'</span>'+
+    '<span class="tag ta">คะแนนเต็ม '+a.maxScore+'</span>'+
+    '</div>';
+  renderCheckStats(assignId,cls);
+  renderCheckList(assignId,cls);
+  openM('m-check');
+}
+
+function renderCheckStats(assignId,cls){
+  var sub=S.submissions[assignId]||{};
+  var stu=cls.students||[]; var total=stu.length;
+  var done=0,late=0,miss=0;
+  Object.values(sub).forEach(function(v){ if(v.status==='done')done++;else if(v.status==='late')late++;else if(v.status==='miss')miss++; });
+  var unchecked=total-(done+late+miss);
+  document.getElementById('m-check-stats').innerHTML=
+    '<div class="sgrid">'+
+    '<div class="sc g"><div class="n">'+done+'</div><div class="l">ส่งแล้ว</div></div>'+
+    '<div class="sc y"><div class="n">'+late+'</div><div class="l">ส่งช้า</div></div>'+
+    '<div class="sc r"><div class="n">'+miss+'</div><div class="l">ไม่ส่ง</div></div>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--g600);margin-bottom:4px">'+
+    '<span>ยังไม่เช็ค: '+unchecked+' คน</span>'+
+    '<span>รวม: '+total+' คน</span>'+
+    '</div>'+
+    '<div style="height:6px;border-radius:99px;background:var(--g100);overflow:hidden;margin-bottom:12px">'+
+    '<div style="height:100%;width:'+(total>0?Math.round((done+late+miss)/total*100):0)+'%;background:linear-gradient(90deg,var(--g),#22c55e);border-radius:99px;transition:width .3s"></div>'+
+    '</div>';
+}
+
+function renderCheckList(assignId,cls){
+  var a=S.assignments.find(function(x){return x.id===assignId});
+  var sub=S.submissions[assignId]||{};
+  var stu=cls.students||[];
+  if(!stu.length){ document.getElementById('m-check-list').innerHTML='<div class="empty"><div class="ei">👤</div><p>ยังไม่มีนักเรียน</p></div>'; return; }
+  document.getElementById('m-check-list').innerHTML=stu.map(function(s){
+    var cur=sub[s.num]||{};
+    var st=cur.status||'';
+    var sc=cur.score!=null?cur.score:'';
+    return '<div class="srow" id="check-row-'+s.num+'">'+
+      '<div class="snum">'+s.num+'</div>'+
+      '<div class="sname">'+esc(s.name)+'</div>'+
+      '<div class="abtns">'+
+        ['done','late','miss'].map(function(x){
+          return '<button class="asb '+x+(st===x?' on':'')+'" onclick="setSubmit(\''+assignId+'\',\''+s.num+'\',\''+x+'\',this)">'+SL[x]+'</button>';
+        }).join('')+
+      '</div>'+
+      '<input class="score-inp'+(sc!==''?' has-val':'')+'" type="number" placeholder="คะแนน" min="0" max="'+a.maxScore+'" value="'+sc+'"'+
+        ' onchange="setScore(\''+assignId+'\',\''+s.num+'\',this)" id="score-'+s.num+'">'+
+    '</div>';
+  }).join('');
+}
+
+function setSubmit(assignId,num,status,btn){
+  if(!S.submissions[assignId]) S.submissions[assignId]={};
+  var cur=(S.submissions[assignId][num]||{}).status;
+  var existing=S.submissions[assignId][num]||{};
+  if(cur===status){ S.submissions[assignId][num]=Object.assign({},existing,{status:''}); delete S.submissions[assignId][num].status; }
+  else{ S.submissions[assignId][num]=Object.assign({},existing,{status:status}); }
+  // update UI
+  var row=btn.closest('.srow');
+  row.querySelectorAll('.asb').forEach(function(b){b.classList.remove('on')});
+  if(cur!==status) btn.classList.add('on');
+  var cls=S.classes.find(function(c){return S.assignments.find(function(a){return a.id===assignId&&a.classId===c.id;});});
+  if(cls){ renderCheckStats(assignId,cls); }
+  cloudSave();
+}
+
+function setScore(assignId,num,inp){
+  if(!S.submissions[assignId]) S.submissions[assignId]={};
+  var existing=S.submissions[assignId][num]||{};
+  var val=inp.value!==''?Number(inp.value):null;
+  S.submissions[assignId][num]=Object.assign({},existing,{score:val});
+  inp.classList.toggle('has-val',val!==null&&inp.value!=='');
+  cloudSave();
+}
+
+function markAllAssign(status){
+  var a=S.assignments.find(function(x){return x.id===currentCheckAssignId}); if(!a) return;
+  var cls=S.classes.find(function(c){return c.id===a.classId}); if(!cls) return;
+  if(!S.submissions[currentCheckAssignId]) S.submissions[currentCheckAssignId]={};
+  (cls.students||[]).forEach(function(s){ var ex=S.submissions[currentCheckAssignId][s.num]||{}; S.submissions[currentCheckAssignId][s.num]=Object.assign({},ex,{status:status}); });
+  renderCheckStats(currentCheckAssignId,cls); renderCheckList(currentCheckAssignId,cls); cloudSave('ทำเครื่องหมายทุกคนแล้ว');
+}
+function clearAllAssign(){
+  if(!currentCheckAssignId) return;
+  S.submissions[currentCheckAssignId]={};
+  var a=S.assignments.find(function(x){return x.id===currentCheckAssignId});
+  var cls=S.classes.find(function(c){return c.id===(a?a.classId:'')});
+  if(cls){ renderCheckStats(currentCheckAssignId,cls); renderCheckList(currentCheckAssignId,cls); } cloudSave();
+}
+function markUnsubmitted(){
+  var a=S.assignments.find(function(x){return x.id===currentCheckAssignId}); if(!a) return;
+  var cls=S.classes.find(function(c){return c.id===a.classId}); if(!cls) return;
+  if(!S.submissions[currentCheckAssignId]) S.submissions[currentCheckAssignId]={};
+  (cls.students||[]).forEach(function(s){ if(!S.submissions[currentCheckAssignId][s.num]||!S.submissions[currentCheckAssignId][s.num].status){ var ex=S.submissions[currentCheckAssignId][s.num]||{}; S.submissions[currentCheckAssignId][s.num]=Object.assign({},ex,{status:'miss'}); }});
+  renderCheckStats(currentCheckAssignId,cls); renderCheckList(currentCheckAssignId,cls); cloudSave('ที่ยังไม่เช็ค → ไม่ส่ง');
+}
+function saveCheckAndClose(){ cloudSave('บันทึกแล้ว ✓'); closeM('m-check'); renderAll(); }
+
+// ═══ MODAL: สั่งงาน ═══
+function openNewAssign(){
+  syncClsSel();
+  document.getElementById('m-assign-t').textContent='สั่งงานใหม่';
+  document.getElementById('a-eid').value='';
+  document.getElementById('a-clsid').value='';
+  document.getElementById('a-cls-sel').value=document.getElementById('assign-cls').value||'';
+  document.getElementById('a-title').value='';
+  document.getElementById('a-due').value='';
+  document.getElementById('a-max').value='10';
+  document.getElementById('a-desc').value='';
+  openM('m-assign');
+}
+function openEditAssign(id){
+  var a=S.assignments.find(function(x){return x.id===id}); if(!a) return;
+  syncClsSel();
+  document.getElementById('m-assign-t').textContent='แก้ไขงาน';
+  document.getElementById('a-eid').value=id;
+  document.getElementById('a-cls-sel').value=a.classId;
+  document.getElementById('a-title').value=a.title;
+  document.getElementById('a-due').value=a.due;
+  document.getElementById('a-max').value=a.maxScore;
+  document.getElementById('a-desc').value=a.desc||'';
+  openM('m-assign');
+}
+function saveAssign(){
+  var cid=document.getElementById('a-cls-sel').value;
+  var title=document.getElementById('a-title').value.trim();
+  var due=document.getElementById('a-due').value;
+  var max=parseInt(document.getElementById('a-max').value)||10;
+  var desc=document.getElementById('a-desc').value.trim();
+  if(!cid||!title||!due){ toast('กรุณากรอกห้อง ชื่องาน และกำหนดส่ง','err'); return; }
+  var eid=document.getElementById('a-eid').value;
+  if(eid){
+    var a=S.assignments.find(function(x){return x.id===eid});
+    if(a) Object.assign(a,{classId:cid,title:title,due:due,maxScore:max,desc:desc});
+  } else {
+    S.assignments.push({id:uid(),classId:cid,title:title,due:due,maxScore:max,desc:desc,createdAt:new Date().toISOString()});
+  }
+  closeM('m-assign'); cloudSave('บันทึกงานแล้ว ✓'); renderAll();
+}
+
+// ═══ REPORT ═══
+function renderReport(){
+  var cid=document.getElementById('rpt-cls').value;
+  var el=document.getElementById('rpt-body'); var eb=document.getElementById('exbar');
+  if(!cid){ el.innerHTML='<div class="empty"><div class="ei">📊</div><p>เลือกห้องเพื่อดูรายงาน</p></div>'; eb.style.display='none'; return; }
+  eb.style.display='flex';
+  var cls=S.classes.find(function(c){return c.id===cid});
+  var stu=cls?(cls.students||[]):[];
+  var assigns=S.assignments.filter(function(a){return a.classId===cid;}).sort(function(a,b){return a.due>b.due?1:-1});
+  if(!assigns.length||!stu.length){ el.innerHTML='<div class="empty"><div class="ei">📋</div><p>ยังไม่มีข้อมูล</p></div>'; return; }
+  // สถิติรวม
+  var tp=0,tp2=0,tp3=0,totalSub=0,totalPossible=assigns.length*stu.length;
+  stu.forEach(function(s){ assigns.forEach(function(a){ var sub=(S.submissions[a.id]||{})[s.num]||{}; if(sub.status==='done'){tp++;totalSub++;} else if(sub.status==='late'){tp2++;totalSub++;} else if(sub.status==='miss'){tp3++;} }); });
+  var submitRate=totalPossible>0?Math.round(totalSub/totalPossible*100):0;
+  // รายคน
+  var rows=stu.map(function(s){
+    var done=0,late=0,miss=0,totalScore=0,scoreCnt=0;
+    assigns.forEach(function(a){ var sub=(S.submissions[a.id]||{})[s.num]||{}; if(sub.status==='done')done++;else if(sub.status==='late')late++;else if(sub.status==='miss')miss++; if(sub.score!=null){totalScore+=sub.score;scoreCnt++;} });
+    var submitted=done+late; var pct=assigns.length>0?Math.round(submitted/assigns.length*100):0;
+    var avgScore=scoreCnt>0?(totalScore/scoreCnt).toFixed(1):'-';
+    var col=pct>=80?'var(--g)':pct>=60?'var(--y)':'var(--r)';
+    return '<div class="rrow" onclick="showStuRpt(\''+cid+'\',\''+s.num+'\')">'+
+      '<div class="rlbl"><span><b>'+s.num+'</b> '+esc(s.name)+(pct<80?'<span style="color:var(--r);font-size:10px;margin-left:3px">⚠</span>':'')+'</span>'+
+      '<div style="display:flex;gap:6px;align-items:center"><span style="font-size:11px;color:var(--g600)">เฉลี่ย '+avgScore+'</span><span style="color:'+col+';font-weight:800">'+pct+'%</span></div></div>'+
+      '<div class="rbg"><div class="rfill" style="width:'+pct+'%;background:'+col+'"></div></div>'+
+      '<div class="rsub">ส่งแล้ว '+done+' · ส่งช้า '+late+' · ไม่ส่ง '+miss+' / '+assigns.length+' งาน · <span style="color:var(--ac)">กดดูรายละเอียด →</span></div>'+
+    '</div>';
+  }).join('');
+  el.innerHTML=
+    '<div class="sgrid" style="margin-bottom:12px">'+
+    '<div class="sc g"><div class="n">'+tp+'</div><div class="l">ส่งแล้ว</div></div>'+
+    '<div class="sc y"><div class="n">'+tp2+'</div><div class="l">ส่งช้า</div></div>'+
+    '<div class="sc r"><div class="n">'+tp3+'</div><div class="l">ไม่ส่ง</div></div>'+
+    '</div>'+
+    '<div class="card" style="margin-bottom:10px">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between">'+
+    '<span style="font-size:13px;font-weight:700">ภาพรวม '+esc(cls.subject)+' '+esc(cls.grade)+'</span>'+
+    '<span style="font-size:22px;font-weight:900;color:'+(submitRate>=80?'var(--g)':submitRate>=60?'var(--y)':'var(--r)')+'">'+submitRate+'%</span></div>'+
+    '<div style="font-size:11px;color:var(--g600);margin-top:4px">อัตราการส่งงาน · '+assigns.length+' งาน</div>'+
+    '<div class="rbg" style="height:10px;margin-top:8px"><div class="rfill" style="width:'+submitRate+'%;background:'+(submitRate>=80?'var(--g)':submitRate>=60?'var(--y)':'var(--r)')+'"></div></div></div>'+
+    '<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--g600)">รายคน (กดดูรายละเอียด)</div>'+rows+'</div>';
+}
+
+function showStuRpt(cid,num){
+  var cls=S.classes.find(function(c){return c.id===cid});
+  var s=cls?(cls.students||[]).find(function(x){return x.num===num}):null; if(!s) return;
+  var assigns=S.assignments.filter(function(a){return a.classId===cid;}).sort(function(a,b){return a.due>b.due?1:-1});
+  var done=0,late=0,miss=0,totalScore=0,scoreCnt=0;
+  assigns.forEach(function(a){ var sub=(S.submissions[a.id]||{})[s.num]||{}; if(sub.status==='done')done++;else if(sub.status==='late')late++;else if(sub.status==='miss')miss++; if(sub.score!=null){totalScore+=sub.score;scoreCnt++;} });
+  var submitted=done+late; var pct=assigns.length>0?Math.round(submitted/assigns.length*100):0;
+  var avgScore=scoreCnt>0?(totalScore/scoreCnt).toFixed(1):'-';
+  var col=pct>=80?'var(--g)':pct>=60?'var(--y)':'var(--r)';
+  document.getElementById('m-stu-rpt-t').textContent=s.num+' '+s.name;
+  document.getElementById('m-stu-rpt-body').innerHTML=
+    '<div style="text-align:center;margin-bottom:14px">'+
+    '<div style="font-size:52px;font-weight:900;color:'+col+'">'+pct+'%</div>'+
+    '<div style="font-size:12px;color:var(--g600)">ส่งงาน '+submitted+'/'+assigns.length+' ชิ้น · คะแนนเฉลี่ย '+avgScore+'</div>'+
+    '<div style="margin-top:6px;display:inline-block;padding:4px 14px;border-radius:99px;font-size:12px;font-weight:700;background:'+(pct>=80?'var(--gb)':'var(--rb)')+';color:'+(pct>=80?'var(--g)':'var(--r)')+'">'+
+    (pct>=80?'✓ ส่งงานสม่ำเสมอ':'⚠ ควรปรับปรุง')+'</div></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:14px">'+
+    '<div class="sdg" style="background:var(--gb);border-radius:var(--rads);padding:10px 6px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--g)">'+done+'</div><div style="font-size:10px;color:var(--g);font-weight:600">ส่งแล้ว</div></div>'+
+    '<div class="sdg" style="background:var(--yb);border-radius:var(--rads);padding:10px 6px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--y)">'+late+'</div><div style="font-size:10px;color:var(--y);font-weight:600">ส่งช้า</div></div>'+
+    '<div class="sdg" style="background:var(--rb);border-radius:var(--rads);padding:10px 6px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--r)">'+miss+'</div><div style="font-size:10px;color:var(--r);font-weight:600">ไม่ส่ง</div></div>'+
+    '</div>'+
+    '<div style="font-size:12px;font-weight:700;color:var(--g600);margin-bottom:7px">รายละเอียดแต่ละงาน</div>'+
+    '<div style="max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch">'+
+    assigns.map(function(a){
+      var sub=(S.submissions[a.id]||{})[s.num]||{};
+      var st=sub.status||'';
+      var sc=sub.score!=null?sub.score:'-';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--g100)">'+
+        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.title)+'</div>'+
+        '<div style="font-size:11px;color:var(--g600);margin-top:1px">กำหนด: '+a.due+'</div></div>'+
+        (st?'<span class="tag" style="background:'+SBG[st]+';color:'+SC[st]+'">'+SL[st]+'</span>':'<span class="tag tg">ยังไม่เช็ค</span>')+
+        '<span style="font-size:12px;font-weight:700;color:var(--ac);min-width:36px;text-align:right">'+sc+(sc!=='-'?'/'+a.maxScore:'')+'</span>'+
+      '</div>';
+    }).join('')+
+    '</div>';
+  openM('m-stu-rpt');
+}
+
+// ═══ EXPORT ═══
+function doExport(){
+  var cid=document.getElementById('rpt-cls').value; if(!cid){ toast('เลือกห้องก่อน','err'); return; }
+  var cls=S.classes.find(function(c){return c.id===cid}); if(!cls) return;
+  var stu=cls.students||[];
+  var assigns=S.assignments.filter(function(a){return a.classId===cid;}).sort(function(a,b){return a.due>b.due?1:-1});
+  var header=['เลขที่','ชื่อ-นามสกุล'];
+  assigns.forEach(function(a){ header.push(a.title+'(สถานะ)'); header.push(a.title+'(คะแนน)'); });
+  header.push('ส่งแล้ว','ส่งช้า','ไม่ส่ง','คะแนนรวม');
+  var rows=[header];
+  stu.forEach(function(s){
+    var row=[s.num,s.name]; var done=0,late=0,miss=0,total=0;
+    assigns.forEach(function(a){ var sub=(S.submissions[a.id]||{})[s.num]||{}; var st=sub.status||''; var sc=sub.score!=null?sub.score:''; row.push(st==='done'?'ส่งแล้ว':st==='late'?'ส่งช้า':st==='miss'?'ไม่ส่ง':'-'); row.push(sc); if(st==='done')done++;else if(st==='late')late++;else if(st==='miss')miss++; if(sub.score!=null)total+=sub.score; });
+    rows.push(row.concat([done,late,miss,total]));
+  });
+  var csv=rows.map(function(r){return r.join(',');}).join('\n');
+  var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob); var a=document.createElement('a');
+  a.href=url; a.download='assignments_'+cls.subject+'_'+cls.grade+'_'+fmt(new Date())+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('Export สำเร็จ ✓','ok');
+}
+
+// ═══ MODAL: บัญชี ═══
+function openAcc(){
+  if(!ME) return;
+  var avEl=document.getElementById('acc-av');
+  if(ME.photo){ avEl.innerHTML='<img src="'+ME.photo+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'; }
+  else{ avEl.textContent=(ME.name||ME.email).substring(0,2).toUpperCase(); }
+  document.getElementById('acc-name').textContent=ME.name||'-';
+  document.getElementById('acc-email').textContent=ME.email||'-';
+  openM('m-acc');
+}
+
+// ═══ MODAL: ห้องเรียน ═══
+function openNewCls(){
+  document.getElementById('m-cls-t').textContent='เพิ่มห้องเรียน'; document.getElementById('eid').value='';
+  ['f-subj','f-grade'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('f-year').value='2568'; document.getElementById('f-icon').value='📐';
+  openM('m-cls');
+}
+function openEditCls(id){
+  var cls=S.classes.find(function(c){return c.id===id}); if(!cls) return;
+  document.getElementById('m-cls-t').textContent='แก้ไขห้องเรียน'; document.getElementById('eid').value=id;
+  document.getElementById('f-subj').value=cls.subject||''; document.getElementById('f-grade').value=cls.grade||'';
+  document.getElementById('f-year').value=cls.year||''; document.getElementById('f-icon').value=cls.icon||'📐';
+  openM('m-cls');
+}
+function saveCls(){
+  var subj=document.getElementById('f-subj').value.trim(); var grade=document.getElementById('f-grade').value.trim();
+  if(!subj||!grade){ toast('กรุณากรอกวิชาและห้องเรียน','err'); return; }
+  var year=document.getElementById('f-year').value.trim(); var icon=document.getElementById('f-icon').value;
+  var eid=document.getElementById('eid').value;
+  if(eid){ var c=S.classes.find(function(x){return x.id===eid}); if(c) Object.assign(c,{subject:subj,grade:grade,year:year,icon:icon}); }
+  else{ S.classes.push({id:uid(),subject:subj,grade:grade,year:year,icon:icon,students:[]}); }
+  closeM('m-cls'); cloudSave('บันทึกห้องเรียนแล้ว ✓'); renderAll();
+}
+
+// ═══ MODAL: นักเรียน ═══
+function openStu(id){
+  var cls=S.classes.find(function(c){return c.id===id}); if(!cls) return;
+  document.getElementById('s-cid').value=id;
+  document.getElementById('m-stu-t').textContent=esc(cls.icon||'')+' '+esc(cls.subject)+' '+esc(cls.grade);
+  document.getElementById('s-name').value=''; pendImp=[];
+  document.getElementById('fprev').style.display='none'; document.getElementById('finp').value='';
+  renderStuList(id); openM('m-stu');
+}
+function renderStuList(id){
+  var cls=S.classes.find(function(c){return c.id===id}); var stu=cls?(cls.students||[]):[];
+  var el=document.getElementById('s-list');
+  if(!stu.length){ el.innerHTML='<div class="empty" style="padding:16px"><p>ยังไม่มีนักเรียน</p></div>'; return; }
+  el.innerHTML='<div class="card" style="margin-bottom:8px"><div style="font-size:12px;font-weight:600;color:var(--g600);margin-bottom:8px">รายชื่อทั้งหมด '+stu.length+' คน</div>'+
+    stu.map(function(s){ return '<div class="srow"><div class="snum">'+s.num+'</div><div style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.name)+'</div>'+
+      '<button class="btn bic" style="color:var(--r);flex-shrink:0" onclick="rmStu(\''+id+'\',\''+s.num+'\')">✕</button></div>'; }).join('')+'</div>';
+}
+function addStu(){
+  var id=document.getElementById('s-cid').value; var name=document.getElementById('s-name').value.trim(); if(!name) return;
+  var cls=S.classes.find(function(c){return c.id===id}); if(!cls) return;
+  cls.students=cls.students||[]; cls.students.push({num:pad(cls.students.length+1),name:name});
+  document.getElementById('s-name').value=''; document.getElementById('s-name').focus();
+  renderStuList(id); cloudSave();
+}
+function onFSel(e){ var f=e.target.files[0]; if(f) readF(f); }
+function onDrag(e,v){ e.preventDefault(); document.getElementById('fdrop').classList.toggle('drag',!!v); }
+function onDrop(e){ e.preventDefault(); document.getElementById('fdrop').classList.remove('drag'); var f=e.dataTransfer.files[0]; if(f) readF(f); }
+function readF(file){
+  var r=new FileReader();
+  r.onload=function(e){
+    var lines=e.target.result.split(/\r?\n/).map(function(l){return l.trim();}).filter(Boolean);
+    var names=lines.map(function(l){ var p=l.split(','); return(p.length>=2&&!isNaN(p[0].trim()))?p.slice(1).join(',').trim():l; }).filter(Boolean);
+    pendImp=names;
+    document.getElementById('fpc').textContent='✓ พบ '+names.length+' รายชื่อ';
+    document.getElementById('fpl').innerHTML=names.slice(0,10).map(function(n,i){return '<div>'+(i+1)+'. '+esc(n)+'</div>';}).join('')+(names.length>10?'<div style="color:var(--g400)">... และอีก '+(names.length-10)+' คน</div>':'');
+    document.getElementById('fprev').style.display='block';
+  };
+  r.readAsText(file,'UTF-8');
+}
+function confirmImp(){
+  var id=document.getElementById('s-cid').value; var cls=S.classes.find(function(c){return c.id===id}); if(!cls||!pendImp.length) return;
+  cls.students=cls.students||[]; pendImp.forEach(function(n){ cls.students.push({num:pad(cls.students.length+1),name:n}); });
+  pendImp=[]; document.getElementById('fprev').style.display='none'; document.getElementById('finp').value='';
+  renderStuList(id); cloudSave('นำเข้าสำเร็จ ✓');
+}
+function cancelImp(){ pendImp=[]; document.getElementById('fprev').style.display='none'; document.getElementById('finp').value=''; }
+function rmStu(id,num){
+  var cls=S.classes.find(function(c){return c.id===id}); if(!cls) return;
+  cls.students=(cls.students||[]).filter(function(s){return s.num!==num;});
+  cls.students.forEach(function(s,i){s.num=pad(i+1);});
+  renderStuList(id); cloudSave();
+}
+function delCls(){
+  var id=document.getElementById('s-cid').value; if(!confirm('ยืนยันลบห้องเรียนนี้?')) return;
+  S.classes=S.classes.filter(function(c){return c.id!==id;});
+  S.assignments=S.assignments.filter(function(a){return a.classId!==id;});
+  closeM('m-stu'); cloudSave('ลบห้องเรียนแล้ว'); renderAll();
+}
+
+// ═══ HELPERS ═══
+function openM(id){ document.getElementById(id).classList.add('open'); }
+function closeM(id){ document.getElementById(id).classList.remove('open'); }
+var tTmr;
+function toast(msg,type){ var el=document.getElementById('toast'); el.textContent=msg; el.className='show '+(type||'info'); clearTimeout(tTmr); tTmr=setTimeout(function(){el.className='';},2800); }
+function uid(){ return 'a'+Date.now()+Math.random().toString(36).slice(2,6); }
+function fmt(d){ return d.toISOString().slice(0,10); }
+function pad(n){ return n<10?'0'+n:String(n); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function getDayTH(d){ return ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'][d.getDay()]; }
+function getMonthTH(d){ return ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][d.getMonth()]; }
+</script>
+</body>
+</html>
